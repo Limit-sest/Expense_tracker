@@ -1,9 +1,11 @@
 import json
 import os
 from datetime import datetime
-from rich.console import Console
-from rich.table import Table
-from rich import print
+# from rich.console import Console
+# from rich.table import Table
+# from rich import print
+from textual.app import App, ComposeResult
+from textual.widgets import Footer, Header, DataTable
 
 expense_file = 'expenses.json'
 
@@ -28,12 +30,18 @@ def add_expense():
 
     expenses = read_expenses()
 
+    ids = []
+    for exp in expenses:
+        exp_id = exp[0]
+        ids.append(exp_id)
+
     expenses.append(
-        {
-            'amount': amount,
-            'name': name,
-            'date': datetime.today().isoformat()
-        }
+        [
+            ids.max() + 1,
+            datetime.today().strftime("%m-%d-%Y"),
+            name,
+            amount
+        ]
     )
     write_expenses(expenses)
     print('[green]Expense added successfully.[/green]')
@@ -103,6 +111,45 @@ def main():
     else:
         print('[red]Please enter a valid option.[/red]')
 
-if __name__ == '__main__':
-    while True:
-        main()
+class ExpenseTracker(App):
+    """A Textual app to for managing expenses."""
+
+    BINDINGS = [("d", "delete", "Delete selected")]
+
+    def compose(self) -> ComposeResult:
+        """Create child widgets for the app."""
+        yield Header()
+        yield DataTable()
+        yield Footer()
+
+    def action_delete(self):
+        """Delete the currently selected row."""
+        table = self.query_one(DataTable)
+
+        if table.cursor_row is not None:
+            # Get the key of the currently selected row using its index
+            row_key = table.cursor_row
+            if row_key is not None:
+                # Remove the row with the corresponding key
+                table.remove_row(row_key)
+
+    def on_mount(self) -> None:
+        table = self.query_one(DataTable)
+        table.cursor_type = 'row'
+        #rows = read_expenses()
+        rows = read_expenses()
+        keys = []
+
+
+        rows.insert(0, ('Date', 'Expense', 'Amount'))
+        table.add_columns(*rows[0])
+        for exp in rows[1:]:
+            key = table.add_row(exp[1], exp[2], str(exp[3]), key=exp[0])
+            keys.append(key)
+
+
+
+
+if __name__ == "__main__":
+    app = ExpenseTracker()
+    app.run()
