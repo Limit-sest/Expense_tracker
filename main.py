@@ -126,6 +126,10 @@ class ExpenseTracker(App):
         """Delete the currently selected row."""
         table = self.query_one("#expense_table", DataTable)
 
+        if not table.is_valid_coordinate(table.cursor_coordinate):
+            self.notify("No expense to delete.", severity='warning')
+            return
+
         row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
         table.remove_row(row_key)
 
