@@ -1,11 +1,12 @@
 import json
 import os
 from datetime import datetime
-# from rich.console import Console
-# from rich.table import Table
-# from rich import print
+from time import sleep
+
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header, DataTable
+from textual.widgets import Footer, Header, DataTable, Input
+from textual.screen import Screen
+from textual import on
 
 expense_file = 'expenses.json'
 
@@ -111,10 +112,21 @@ def main():
     else:
         print('[red]Please enter a valid option.[/red]')
 
+class Add(Screen):
+    def compose(self) -> ComposeResult:
+        yield Header(name='Add an expense')
+        yield Input(placeholder="Short description of the expense", type="text")
+        yield Input(placeholder="Cost of the expense", type="number")
+
+    @on(Input.Submitted)
+    def submit(self) -> None:
+        app.pop_screen()
+
 class ExpenseTracker(App):
     """A Textual app to for managing expenses."""
 
-    BINDINGS = [("d", "delete", "Delete selected")]
+    BINDINGS = [("d", "delete", "Delete selected"), ("a", "push_screen('add')", "Add new")]
+    SCREENS = {"add": Add}
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -138,6 +150,7 @@ class ExpenseTracker(App):
             if str(exp[0]) == row_key:
                 expenses.remove(exp)
                 write_expenses(expenses)
+
 
     def on_mount(self) -> None:
         table = self.query_one("#expense_table", DataTable)
