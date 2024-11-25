@@ -119,36 +119,32 @@ class ExpenseTracker(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
-        yield DataTable()
+        yield DataTable(id="expense_table")
         yield Footer()
 
     def action_delete(self):
         """Delete the currently selected row."""
-        table = self.query_one(DataTable)
+        table = self.query_one("#expense_table", DataTable)
 
-        if table.cursor_row is not None:
-            # Get the key of the currently selected row using its index
-            row_key = table.cursor_row
-            if row_key is not None:
-                # Remove the row with the corresponding key
-                table.remove_row(row_key)
+        row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
+        table.remove_row(row_key)
+
+        expenses = read_expenses()
+        for exp in expenses:
+            if str(exp[0]) == row_key:
+                expenses.remove(exp)
+                write_expenses(expenses)
 
     def on_mount(self) -> None:
-        table = self.query_one(DataTable)
+        table = self.query_one("#expense_table", DataTable)
         table.cursor_type = 'row'
         #rows = read_expenses()
         rows = read_expenses()
-        keys = []
-
 
         rows.insert(0, ('Date', 'Expense', 'Amount'))
         table.add_columns(*rows[0])
         for exp in rows[1:]:
-            key = table.add_row(exp[1], exp[2], str(exp[3]), key=exp[0])
-            keys.append(key)
-
-
-
+            table.add_row(exp[1], exp[2], str(exp[3]), key=str(exp[0]))
 
 if __name__ == "__main__":
     app = ExpenseTracker()
