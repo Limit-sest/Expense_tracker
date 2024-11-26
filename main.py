@@ -1,8 +1,6 @@
 import json
 import os
 from datetime import datetime
-from time import sleep
-
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header, DataTable, Input, Button
 from textual.screen import Screen
@@ -21,7 +19,7 @@ def write_expenses(expenses):
     with open(expense_file, 'w') as f:
         json.dump(expenses, f)
 
-class Add(Screen):
+class Add(Screen): #TODO: Auto refresh the table, see https://textual.textualize.io/guide/screens/#returning-data-from-screens
     def compose(self) -> ComposeResult:
         yield Input(placeholder="Short description of the expense", type="text", id="name_input")
         yield Input(placeholder="Cost of the expense", type="number", id="cost_input")
@@ -50,15 +48,17 @@ class Add(Screen):
             exp_id = exp[0]
             ids.append(exp_id)
 
-        expenses.append(
-            [
-                max(ids) + 1 if ids else 0,
-                datetime.today().strftime("%m-%d-%Y"),
-                name,
-                cost
-            ]
-        )
+        new_expense = [
+            max(ids) + 1 if ids else 0,
+            datetime.today().strftime("%m-%d-%Y"),
+            name,
+            cost
+        ]
+        expenses.append(new_expense)
         write_expenses(expenses)
+
+        table = self.app.query_one("#expense_table", DataTable)
+        table.add_row(new_expense[1], new_expense[2], str(new_expense[3]), key=str(new_expense[0]))
 
         await self.app.pop_screen()
 
@@ -106,6 +106,7 @@ class ExpenseTracker(App):
         table.add_columns(*rows[0])
         for exp in rows[1:]:
             table.add_row(exp[1], exp[2], str(exp[3]), key=str(exp[0]))
+
 
 if __name__ == "__main__":
     app = ExpenseTracker()
