@@ -4,7 +4,7 @@ from datetime import datetime
 from time import sleep
 
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header, DataTable, Input
+from textual.widgets import Footer, Header, DataTable, Input, Button
 from textual.screen import Screen
 from textual import on
 
@@ -21,106 +21,50 @@ def write_expenses(expenses):
     with open(expense_file, 'w') as f:
         json.dump(expenses, f)
 
-def add_expense():
-    amount = float(input('Price of your expense: $'))
-    name = input('Short description of your expense: ')
-
-    if amount <= 0:
-        print('Please enter a number greater than 0.')
-        amount = float(input('Price of your expense: $'))
-
-    expenses = read_expenses()
-
-    ids = []
-    for exp in expenses:
-        exp_id = exp[0]
-        ids.append(exp_id)
-
-    expenses.append(
-        [
-            ids.max() + 1,
-            datetime.today().strftime("%m-%d-%Y"),
-            name,
-            amount
-        ]
-    )
-    write_expenses(expenses)
-    print('[green]Expense added successfully.[/green]')
-    print('\n')
-
-def list_expenses():
-    expenses = read_expenses()
-
-    table = Table(title="Your expenses")
-    table.add_column('ID')
-    table.add_column('Expense')
-    table.add_column('Amount', no_wrap=True)
-    table.add_column('Date', no_wrap=True)
-
-    for exp in expenses:
-        id = expenses.index(exp) + 1
-        table.add_row(str(id), exp['name'], str(exp['amount']), datetime.fromisoformat(exp['date']).strftime('%Y-%m-%d'))
-
-    console = Console()
-    console.print(table)
-    print('\n')
-
-def delete_expense():
-    expenses = read_expenses()
-
-    list_expenses()
-    try:
-        id = int(input('Enter ID to delete: '))
-        if id <= 0 or id > len(expenses):
-            raise ValueError
-    except ValueError:
-        print('[red]Please enter a valid ID.[/red]')
-        delete_expense()
-    else:
-        if input('Do you really want to delete this expense? [y/N]: ').lower() != 'y':
-            return
-
-        expenses.pop(id - 1)
-        write_expenses(expenses)
-        print('[green]Expense deleted successfully.[/green]')
-        print('\n')
-
-def main():
-    options = ("Exit", "Add an expense", "List expenses", "Delete expense")
-    table = Table()
-    table.add_column(style="cyan", no_wrap=True)
-    table.add_column("Select an option")
-
-    for option in options:
-        table.add_row(str(options.index(option)), option)
-
-    console = Console()
-    console.print(table)
-
-    selected = input(f'\nSelect an option (0-{len(options)-1}): ')
-    if selected == '0':
-        exit()
-    elif selected == '1':
-        print('\n')
-        add_expense()
-    elif selected == '2':
-        print('\n')
-        list_expenses()
-    elif selected == '3':
-        print('\n')
-        delete_expense()
-    else:
-        print('[red]Please enter a valid option.[/red]')
-
 class Add(Screen):
     def compose(self) -> ComposeResult:
-        yield Header(name='Add an expense')
-        yield Input(placeholder="Short description of the expense", type="text")
-        yield Input(placeholder="Cost of the expense", type="number")
+        yield Input(placeholder="Short description of the expense", type="text", id="name_input")
+        yield Input(placeholder="Cost of the expense", type="number", id="cost_input")
+        yield Button(label="Add expense", id="submit_button")
+        yield Button(label="Cancel", id="cancel_button")
 
-    @on(Input.Submitted)
-    def submit(self) -> None:
-        app.pop_screen()
+    @on(Button.Pressed, "#submit_button")
+    async def handle_submit(self) -> None:
+        name = self.query_one("#name_input", Input).value
+        cost = self.query_one("#cost_input", Input).value
+
+        cost = float(cost)
+
+        if cost <= 0:
+            self.notify("Please enter a positive number!", severity='error')
+            return
+
+        if not name:
+            self.notify("Please enter a name of the expense.", severity='error')
+            return
+
+        expenses = read_expenses()
+
+        ids = []
+        for exp in expenses:
+            exp_id = exp[0]
+            ids.append(exp_id)
+
+        expenses.append(
+            [
+                max(ids) + 1 if ids else 0,
+                datetime.today().strftime("%m-%d-%Y"),
+                name,
+                cost
+            ]
+        )
+        write_expenses(expenses)
+
+        await self.app.pop_screen()
+
+    @on(Button.Pressed, "#cancel_button")
+    async def handle_cancel(self) -> None:
+        await self.app.pop_screen()
 
 class ExpenseTracker(App):
     """A Textual app to for managing expenses."""
