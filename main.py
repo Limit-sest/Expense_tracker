@@ -19,7 +19,7 @@ def write_expenses(expenses):
     with open(expense_file, 'w') as f:
         json.dump(expenses, f)
 
-class Add(Screen): #TODO: Auto refresh the table, see https://textual.textualize.io/guide/screens/#returning-data-from-screens
+class Add(Screen):
     def compose(self) -> ComposeResult:
         yield Input(placeholder="Short description of the expense", type="text", id="name_input")
         yield Input(placeholder="Cost of the expense", type="number", id="cost_input")
@@ -27,7 +27,7 @@ class Add(Screen): #TODO: Auto refresh the table, see https://textual.textualize
         yield Button(label="Cancel", id="cancel_button")
 
     @on(Button.Pressed, "#submit_button")
-    async def handle_submit(self) -> None:
+    def handle_submit(self) -> None:
         name = self.query_one("#name_input", Input).value
         cost = self.query_one("#cost_input", Input).value
 
@@ -57,19 +57,16 @@ class Add(Screen): #TODO: Auto refresh the table, see https://textual.textualize
         expenses.append(new_expense)
         write_expenses(expenses)
 
-        table = self.app.query_one("#expense_table", DataTable)
-        table.add_row(new_expense[1], new_expense[2], str(new_expense[3]), key=str(new_expense[0]))
-
-        await self.app.pop_screen()
+        self.dismiss(new_expense)
 
     @on(Button.Pressed, "#cancel_button")
-    async def handle_cancel(self) -> None:
-        await self.app.pop_screen()
+    def handle_cancel(self) -> None:
+        self.app.pop_screen()
 
 class ExpenseTracker(App):
     """A Textual app to for managing expenses."""
 
-    BINDINGS = [("d", "delete", "Delete selected"), ("a", "push_screen('add')", "Add new")]
+    BINDINGS = [("d", "delete", "Delete selected"), ("a", "add", "Add new")]
     SCREENS = {"add": Add}
 
     def compose(self) -> ComposeResult:
@@ -95,11 +92,17 @@ class ExpenseTracker(App):
                 expenses.remove(exp)
                 write_expenses(expenses)
 
+    def action_add(self):
+        def apply_change(new_expense: list) -> None:
+            table = self.query_one("#expense_table", DataTable)
+            table.add_row(new_expense[1], new_expense[2], str(new_expense[3]), key=str(new_expense[0]))
+
+        self.push_screen("add", apply_change)
+
 
     def on_mount(self) -> None:
         table = self.query_one("#expense_table", DataTable)
         table.cursor_type = 'row'
-        #rows = read_expenses()
         rows = read_expenses()
 
         rows.insert(0, ('Date', 'Expense', 'Amount'))
