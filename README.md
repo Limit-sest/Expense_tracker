@@ -3,6 +3,16 @@
 
 🚀 *[Try the online demo](https://textual-web.io/limit6/expense_tracker)*
 
+<details>
+
+<summary>
+  Click to show screenshot
+</summary>
+
+![ExpenseTracker_Screenshot](https://github.com/user-attachments/assets/aa79e79d-19af-404e-acbc-196238ff7db1)
+  
+</details>
+
 ## Features
 - Adding expenses
 - Deleting expenses
